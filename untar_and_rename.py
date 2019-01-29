@@ -1,5 +1,3 @@
-
-
 import os, re, time, tarfile, shutil
 #from __future__ import print_function
 from NProtocolo import NLandsat
@@ -56,7 +54,7 @@ def rename(ruta):
                     
                 arc.close()
 
-                print('Escena:', sc, 'Indice Quality band:', ix)
+                #print('Escena:', sc, 'Indice Quality band:', ix)
                 
                 if not 'LC08' in sc:
                     print('Eliminando BQA de', sc)
@@ -148,7 +146,7 @@ def untar(ruta):
             tar.close()
             os.remove(fname)
             tar.close()
-            os.chdir(r'C:\Protocolo')
+            os.chdir('../')
             #rename(nfname)
             
                 #Ahora hacermos el rename con la nueva nomenclatura!
@@ -257,13 +255,13 @@ if __name__ == "__main__":
         
             if 'l7etm' in sc and sc > '20030714':
                 print('Landsat 7', sc,  'lista para aplicar el gapfill')
-                gapfill()
+                #gapfill()
 
             else:
                 ruta_escena = os.path.join(ruta, sc)
                 print('ESCENA A PROCESAR:', sc)
-                MiEscena = Landsat(ruta_escena)
-                MiEscena.run_all()
+                MiEscena = NLandsat(ruta_escena)
+                MiEscena.run()
         
 print('zACABO')
 
