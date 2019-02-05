@@ -60,6 +60,10 @@ class NLandsat(object):
         self.hist = hist
         if 'l7etm' in self.escena:
             self.sat = 'L7'
+            if self.escena > '20030714':
+                    self.gapfill = os.path.join(self.ruta_escena, 'gapfill')
+            else:
+                    self.gapfill = self.ruta_escena
         elif 'l8oli' in self.escena:
             self.sat = 'L8'
         elif 'l5tm' in self.escena:
@@ -140,7 +144,9 @@ class NLandsat(object):
             
             '''-----\n
             Este metodo genera el algortimo Fmask que sera el que vendra por defecto en la capa de calidad de
-            las landsat a partir del otono de 2015'''
+            las landsat a partir del otono de 2015. En el Porotoclo v1 haciamos la Fmask a las escenas corregidas con el gapfill.
+            Realmente es mejnor no hacerlo y hacerselo a las escenas con los gaps, porque asi esas franjas no van a entrar en la
+            busqueda del kl. Ahora se corrigen con las gapmasks, pero asi estan doblemente corregidas'''
             
             os.chdir(self.ruta_escena)
                 
@@ -298,10 +304,37 @@ class NLandsat(object):
                     
         else:
             
-            for i in os.listdir(self.ruta_escena):
+            if self.gapfill != self.ruta_escena:
+                    path = self.gapfill
+                    for i in os.listdir(self.ruta_escena):
+                            if 'Fmask4' in i:
+                                    fmask = os.path.join(self.ruta_escena, i)
+                                    nfmask = os.path.join(self.gapfill, i)
+                    os.rename(fmask, nfmask)
+
+            # Creamos una carpeta para las gapmask reproyectadas al extent comun en /temp
+            os.makedirs(os.path.join(self.temp, 'gap_mask'), exist_ok = True)
+            ori_gap = os.path.join(self.ruta_escena, 'gap_mask')
+            temp_gap = os.path.join(self.temp, 'gap_mask')
+
+            # Reproyectamos las gapmasks
+            for i in os.listdir(ori_gap):
+
+                    ori_gap = os.path.join(ori_gap, i)
+                    temp_gap = os.path.join(temp_gap, i)
+
+                    cmd = "gdal_translate -projwin  623385.0 4266315.0 867615.0 4034685.0 -a_nodata 255 {} {}".format(ori_gap, temp_gap)
+                    print(cmd)
+                    os.system(cmd)
+
+
+            else:
+                    path = self.ruta_escena
+
+            for i in os.listdir(path):
                 if (re.search('B[1-7]', i) and not 'B6' in i) or re.search('Fmask4', i):
 
-                    ins = os.path.join(self.ruta_escena, i)
+                    ins = os.path.join(path, i)
                     out = os.path.join(path_rad, i)
 
                     cmd = "gdal_translate -projwin  623385.0 4266315.0 867615.0 4034685.0 {} {}".format(ins, out)
@@ -321,9 +354,9 @@ class NLandsat(object):
         #por si se quiere comprobar algo. Ya aqui se borran antes de comenzar la siguiente
         t = time.time()
 
-        for i in os.listdir(self.temp):
-            arz = os.path.join(self.temp, i)
-            os.remove(arz)
+        #for i in os.listdir(self.temp):
+            #arz = os.path.join(self.temp, i)
+            #os.remove(arz)
 
         #Hacemos el recorte al dtm para que tenga la misma extension que la escena y poder operar con los arrays
         t = time.time()
@@ -389,7 +422,7 @@ class NLandsat(object):
         lista_kl = []
 
         # Aqui anadimos la distincion entre las L7 con gapfill y el resto de las landsat!
-        if not self.sat == 'L7' and self.escena > '20030714':
+        if not (self.sat == 'L7' and self.escena > '20030714'):
 
             for i in os.listdir(ruta):
                 banda = i[-6:-4]
@@ -448,8 +481,9 @@ class NLandsat(object):
         else:
 
             print('Haciendo una l7 con gapfill... Nos gustan los retos ;)')
+            lista = []
             bands = ['B1', 'B2', 'B3', 'B4', 'B5', 'B6_VCID_1', 'B6_VCID_2', 'B7']
-            ruta_gap = os.path.join(self.ruta_escena, 'gap_mask')
+            ruta_gap = os.path.join(self.temp, 'gap_mask')
             gap_bandas = [i for i in os.listdir(ruta_gap)]
             mydict = dict(zip(bands, gap_bandas))
             for n, e in enumerate(mydict):

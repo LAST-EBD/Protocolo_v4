@@ -137,7 +137,7 @@ def gapfill():
         
         if 'LANDSAT_SCENE_ID' in i:
             
-            usgs_id = i[-24:-3]
+            usgs_id = i[-23:-3]
             print(usgs_id + 'USGS_ID NEW!!!!!!')
 
     dgapfill = {'B10': '_B1.TIF', 'B20': '_B2.TIF', 'B30': '_B3.TIF', 'B40': '_B4.TIF', 'B50': '_B5.TIF',\

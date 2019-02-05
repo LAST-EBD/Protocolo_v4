@@ -256,10 +256,9 @@ if __name__ == "__main__":
             if 'l7etm' in sc and sc > '20030714':
                 print('Landsat 7', sc,  'lista para aplicar el gapfill')
                 gapfill()
-                ruta_escena = os.path.join(ruta, sc)
                 MiEscena = NLandsat(ruta_escena)
                 MiEscena.run()
-                
+
             else:
                 ruta_escena = os.path.join(ruta, sc)
                 print('ESCENA A PROCESAR:', sc)
