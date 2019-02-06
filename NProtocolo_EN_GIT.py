@@ -306,42 +306,56 @@ class NLandsat(object):
             
             if self.gapfill != self.ruta_escena:
                     path = self.gapfill
+                    
                     for i in os.listdir(self.ruta_escena):
                             if 'Fmask4' in i:
                                     fmask = os.path.join(self.ruta_escena, i)
                                     nfmask = os.path.join(self.gapfill, i)
                     os.rename(fmask, nfmask)
+                    print('Fmask Movida de', fmask, ' a', nfmask, '!!!!!!!!!!!!!!!!!!!!')
 
-            # Creamos una carpeta para las gapmask reproyectadas al extent comun en /temp
-            os.makedirs(os.path.join(self.temp, 'gap_mask'), exist_ok = True)
-            ori_gap = os.path.join(self.ruta_escena, 'gap_mask')
-            temp_gap = os.path.join(self.temp, 'gap_mask')
+                    # Creamos una carpeta para las gapmask reproyectadas al extent comun en /temp
+                    os.makedirs(os.path.join(self.temp, 'gap_mask'), exist_ok = True)
+                    ori_gap = os.path.join(self.ruta_escena, 'gap_mask')
+                    temp_gap = os.path.join(self.temp, 'gap_mask')
 
-            # Reproyectamos las gapmasks
-            for i in os.listdir(ori_gap):
+                    # Reproyectamos las gapmasks
+                    for sc in os.listdir(ori_gap):
 
-                    ori_gap = os.path.join(ori_gap, i)
-                    temp_gap = os.path.join(temp_gap, i)
+                            print('ORIGAP:', ori_gap)
+                            print('SC:', sc)
 
-                    cmd = "gdal_translate -projwin  623385.0 4266315.0 867615.0 4034685.0 -a_nodata 255 {} {}".format(ori_gap, temp_gap)
-                    print(cmd)
-                    os.system(cmd)
+                            ins = os.path.join(ori_gap, sc)
+                            out = os.path.join(temp_gap, sc)
+
+                            cmd = "gdal_translate -projwin  623385.0 4266315.0 867615.0 4034685.0 -a_nodata 255 {} {}".format(ins, out)
+                            print(cmd)
+                            os.system(cmd)
 
 
             else:
                     path = self.ruta_escena
 
             for i in os.listdir(path):
-                if (re.search('B[1-7]', i) and not 'B6' in i) or re.search('Fmask4', i):
+                    if (re.search('B[1-7]', i) and not 'B6' in i): 
 
-                    ins = os.path.join(path, i)
-                    out = os.path.join(path_rad, i)
+                            ins = os.path.join(path, i)
+                            out = os.path.join(path_rad, i)
 
-                    cmd = "gdal_translate -projwin  623385.0 4266315.0 867615.0 4034685.0 {} {}".format(ins, out)
-                    print(cmd)
-                    os.system(cmd)
-                
-                
+                            cmd = "gdal_translate -projwin  623385.0 4266315.0 867615.0 4034685.0 {} {}".format(ins, out)
+                            print(cmd)
+                            os.system(cmd)
+                    elif re.search('Fmask4', i):
+
+                            ins = os.path.join(path, i)
+                            out = os.path.join(path_rad, i)
+
+                            cmd = "gdal_translate -projwin  623385.0 4266315.0 867615.0 4034685.0 -a_nodata 255 {} {}".format(ins, out)
+                            print(cmd)
+                            os.system(cmd)
+
+
+ 
     def get_kl_csw(self):
         
         '''Este metodo obtiene los Kl para cada banda. Lo hace buscando los valores minimos dentro 
@@ -563,11 +577,12 @@ class NLandsat(object):
 
             try:
 
-                landsat.insert_one(self.newesc)
+                landsat.update({'_id': self.escena}, {'$set': {'Info.Pasos.rad': {'kl_values': {self.kl}}}})
 
             except Exception as e:
 
-                landsat.update_one({'_id': self.escena}, {'$set': {'Info.Pasos.rad': self.kl}})
+                print('Unexpected error:', type(e), e)
+
             
                        
     def get_radiance(self):
