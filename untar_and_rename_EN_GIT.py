@@ -252,8 +252,9 @@ if __name__ == "__main__":
     for sc in os.listdir(ruta):
         
         if os.path.isdir(os.path.join(ruta, sc)):
-        
+
             if 'l7etm' in sc and sc > '20030714':
+                ruta_escena = os.path.join(ruta, sc)
                 print('Landsat 7', sc,  'lista para aplicar el gapfill')
                 gapfill()
                 MiEscena = NLandsat(ruta_escena)

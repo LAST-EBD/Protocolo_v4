@@ -3,11 +3,11 @@ import arrow
 import landsatxplore.api
 from landsatxplore.earthexplorer import EarthExplorer
 
-api = landsatxplore.api.API(os.environ.get('usgs_user', 'usgs_password')
-ee = EarthExplorer('usgs_user', 'usgs_password')
+api = landsatxplore.api.API(os.environ.get('usgs_user'), os.environ.get('usgs_password'))
+ee = EarthExplorer(os.environ.get('usgs_user'), os.environ.get('usgs_password'))
 
 today = arrow.now().format('YYYY-MM-DD')
-month = arrow.now().shift(days=-60).format('YYYY-MM-DD')
+month = arrow.now().shift(days=-45).format('YYYY-MM-DD')
 
 scenes_oli = api.search(
         dataset='LANDSAT_8_C1',
