@@ -350,3 +350,4 @@ class Product(object):
 
 
         print('Depth Mask Generada')
+
