@@ -8,7 +8,7 @@ from datetime import datetime, date
 class Product(object):
     
     
-    '''Esta clase genera los productos deinundacion, turbidez del agua y ndvi de las escenas normalizadas'''
+    '''Esta clase genera los productos de inundacion, turbidez del agua y ndvi de las escenas normalizadas'''
     
         
     def __init__(self, ruta_nor):
@@ -186,6 +186,87 @@ class Product(object):
         
         waterMask = os.path.join(self.data, 'water_mask_turb.tif')
         outfile = os.path.join(self.productos, self.escena + '_turbidity.tif')
+        print(outfile)
+        
+        with rasterio.open(flood) as flood:
+            FLOOD = flood.read()
+        
+        with rasterio.open(waterMask) as wmask:
+            WMASK = wmask.read()
+            
+        with rasterio.open(self.blue) as blue:
+            BLUE = blue.read()
+            BLUE = np.where(BLUE == 0, 1, BLUE)
+            BLUE = np.true_divide(BLUE, 10000)
+                        
+        with rasterio.open(self.green) as green:
+            GREEN = green.read()
+            GREEN = np.where(GREEN == 0, 1, GREEN)
+            GREEN = np.true_divide(GREEN, 10000)
+            GREEN_R = np.where((GREEN<0.1), 0.1, GREEN)
+            GREEN_RECLASS = np.where((GREEN_R>=0.4), 0.4, GREEN_R)
+
+        with rasterio.open(self.red) as red:
+            RED = red.read()
+            RED = np.where(RED == 0, 1, RED)
+            RED = np.true_divide(RED, 10000)
+            RED_RECLASS = np.where((RED>=0.2), 0.2, RED)
+            
+        with rasterio.open(self.nir) as nir:
+            NIR = nir.read()
+            NIR = np.where(NIR == 0, 1, NIR)
+            NIR = np.true_divide(NIR, 10000)
+            NIR_RECLASS = np.where((NIR>0.5), 0.5, NIR)
+            
+        with rasterio.open(self.swir1) as swir1:
+            SWIR1 = swir1.read()
+            SWIR1 = np.where(SWIR1 == 0, 1, SWIR1)
+            SWIR1 = np.true_divide(SWIR1, 10000)
+            SWIR_RECLASS = np.where((SWIR1>=0.09), 0.9, SWIR1)
+        
+        
+        #Turbidez para la el rio
+        rio = (-4.3 + (85.22 * GREEN_RECLASS) - (455.9 * np.power(GREEN_RECLASS,2)) \
+            + (594.58 * np.power(GREEN_RECLASS,3)) + (32.3 * RED) - (15.36 * NIR_RECLASS)  \
+            + (21 * np.power(NIR_RECLASS,2))) - 0.01        
+        #RIO = np.power(math.e, rio)
+        
+        #Turbidez para la marisma        
+        marisma = (4.1263574 + (18.8113118 * RED_RECLASS) - (32.2615219 * SWIR_RECLASS) \
+        - 0.0114108989999999 * np.true_divide(BLUE, NIR)) - 0.01
+        #MARISMA = np.power(math.e, marisma)
+        
+        
+        TURBIDEZ = np.where(((FLOOD == 1) & (WMASK == 1)), marisma, 
+                             np.where(((FLOOD == 1) & (WMASK == 2)), rio, 0))
+        
+        profile = swir1.meta
+        profile.update(nodata=0)
+        profile.update(dtype=rasterio.float32)
+                             
+        with rasterio.open(outfile, 'w', **profile) as dst:
+            dst.write(TURBIDEZ.astype(rasterio.float32))
+            
+        #Insertamos la cobertura de nubes en la BD
+        connection = pymongo.MongoClient("mongodb://localhost")
+        db=connection.teledeteccion
+        landsat = db.landsat
+        
+        
+        try:
+        
+            landsat.update_one({'_id':self.escena}, {'$set':{'Productos': ['Turbidity']}},  upsert=True)
+            
+        except Exception as e:
+            print("Unexpected error:", type(e), e)
+            
+        print('Turbidity Mask Generada')
+
+
+    def depth(self, flood):
+        
+        waterDepth = os.path.join(self.data, 'water_mask_depth.tif')
+        outfile = os.path.join(self.productos, self.escena + '_depth.tif')
         print(outfile)
         
         with rasterio.open(flood) as flood:
