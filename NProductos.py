@@ -272,10 +272,12 @@ class Product(object):
             FLOOD = flood.read()
             
         with rasterio.open(septb4) as septb4:
+            
             SEPTB4 = septb4.read()
-            SEPTB4 = np.true_divide(SEPTB4, 10000)
-            SEPTB4 = np.where(SEPTB4 >= 0.830065359, 0.830065359, SEPTB4)
-            SEPTB4 = SEPTB4 * 306
+                        
+            #En reflectividades
+            SEPTB4_REF = np.true_divide(SEPTB4, 306)
+            SEPTB4_REF = np.where(SEPTB4 >= 0.830065359, 0.830065359, SEPTB4)
         
         with rasterio.open(septwmask) as septwater:
             SEPTWMASK = septwater.read()
@@ -283,67 +285,57 @@ class Product(object):
         #Banda 1
         with rasterio.open(self.blue) as blue:
             BLUE = blue.read()
-            BLUE = np.true_divide(BLUE, 10000)
-            BLUE = np.where(BLUE >= 0.638190955, 0.638190955, BLUE)
-            BLUE = BLUE * 398
             BLUE = np.where(BLUE >= 50, 50, BLUE)
+
+            #Blue en reflectividad
+            BLUE_REF = np.true_divide(BLUE, 398)
+            
             
         #Banda 2
         with rasterio.open(self.green) as green:
             GREEN = green.read()
-            GREEN = np.true_divide(GREEN, 10000)
-            GREEN = np.where(GREEN >= 0.638190955, 0.638190955, GREEN)
-            GREEN = GREEN * 398
-            #GREEN = np.where(GREEN == 0, 1, GREEN)
-            #GREEN = np.true_divide(GREEN, 10000)
-            #GREEN_R = np.where((GREEN<0.1), 0.1, GREEN)
-            #GREEN_RECLASS = np.where((GREEN_R>=0.4), 0.4, GREEN_R)
+            
+            #Green en reflectivdiad
+            GREEN_REF = np.true_divide(GREEN, 401) #
+            
         
         #Banda 4
         with rasterio.open(self.nir) as nir:
             NIR = nir.read()
-            NIR = np.true_divide(NIR, 10000)
-            NIR = np.where(NIR >= 0.830065359, 0.830065359, NIR)
-            NIR = NIR * 306
-            #NIR = np.where(NIR == 0, 1, NIR)
-            #NIR = np.true_divide(NIR, 10000)
-            #NIR_RECLASS = np.where((NIR>0.5), 0.5, NIR)
+            
+            #NIR en reflectividad
+            NIR_REF = np.true_divide(NIR, 422)
+            
         
         #Banda 5
         with rasterio.open(self.swir1) as swir1:
             SWIR1 = swir1.read()
-            SWIR1 = np.true_divide(SWIR1, 10000)
-            SWIR1 = np.where(SWIR1 >= 0.601895735, 0.601895735, SWIR1)
-            SWIR1 = SWIR1 * 422
-            #SWIR1 = np.where(SWIR1 == 0, 1, SWIR1)
-            #SWIR1 = np.true_divide(SWIR1, 10000)
-            #SWIR_RECLASS = np.where((SWIR1>=0.09), 0.09, SWIR1)
-
+            
+            #SWIR1 en reflecrtividad
+            SWIR1_REF = np.true_divide(SWIR1, 324)
+            
         
         #Ratios
-        RATIO_GREEN_NIR = np.true_divide(GREEN, NIR)
+        RATIO_GREEN_NIR = np.true_divide(GREEN_REF, NIR_REF)
         RATIO_GREEN_NIR = np.where(RATIO_GREEN_NIR >= 2.5, 2.5, RATIO_GREEN_NIR)
-        
         RATIO_NIR_SEPTNIR = np.true_divide(NIR, SEPTB4)           
         
-
         #Profundidad para la marisma        
-        #depth = 5.293739862 - (0.038684824 * BLUE) - (0.007525455 * SEPTB4) + (0.02826867 * SWIR1) + \
-            #(1.023724916 * RATIO_GREEN_NIR) - (1.041844944 * RATIO_NIR_SEPTNIR)
             
-        a = ((-0.038684824 * BLUE) + 5.293739862) + (0.02826867 * SWIR1) + (-0.007525455 * SEPTB4) + \
+        a = 5.293739862 + (-0.038684824 * BLUE) + (0.02826867 * SWIR1) + (-0.007525455 * SEPTB4) + \
             (1.023724916 * RATIO_GREEN_NIR) + (-1.041844944 * RATIO_NIR_SEPTNIR)
         
-            
         DEPTH = np.exp(a) - 0.01
         
         #PASAR A NODATA EL AGUA DE SEPTIEMBRE!!!!
+        
+        #Se podría pasar directamente a SWIR1 <= 53
         DEPTH_ = np.where((FLOOD == 1) & (SEPTWMASK == 0), DEPTH, 0)
-
 
         profile = swir1.meta
         profile.update(nodata=0)
         profile.update(dtype=rasterio.float32)
+        profile.update(driver='GTiff')
 
         with rasterio.open(outfile, 'w', **profile) as dst:
             dst.write(DEPTH_.astype(rasterio.float32))
